@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CityPulse - Live City Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: #333;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 30px;
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .header h1 {
+      color: white;
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    .profile-toggle {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .profile-toggle:hover {
+      background: #5a6fd8;
+      transform: translateY(-2px);
+    }
+    .profile-content {
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 15px;
+    }
+    .profile-content.active { display: grid; }
+    .profile-input {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-size: 0.9em;
+      transition: border-color 0.3s ease;
+    }
+    .profile-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    .search-section { margin-bottom: 20px; }
+    .search-container, .compare-section {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .search-container input, .compare-section input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 1em;
+      transition: all 0.3s ease;
+    }
+    .search-container button, .compare-section button {
+      padding: 12px 20px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: all 0.3s ease;
+    }
+    .search-container button:hover, .compare-section button:hover {
+      background: #5a6fd8;
+      transform: translateY(-2px);
+    }
+    .dashboard { display: none; }
+    .dashboard.active { display: block; }
+    .card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
+      transition: transform 0.3s ease;
+    }
+    .card:hover { transform: translateY(-5px); }
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.9em;
+    }
+    @media (max-width: 768px) {
+      .profile-content {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header class="header">
+    <h1>CityPulse</h1>
+    <button class="profile-toggle" id="toggleProfileBtn">Edit Profile</button>
+    <div class="profile-content" id="profileContent">
+      <input type="text" class="profile-input" placeholder="Your Name" id="userName">
+      <input type="text" class="profile-input" placeholder="Your City" id="userCity">
+      <button class="profile-toggle" id="saveProfileBtn">Save Profile</button>
+    </div>
+  </header>
+
+  <div class="search-section">
+    <div class="search-container">
+      <input type="text" id="cityInput" placeholder="Enter city name">
+      <button id="searchBtn">Search</button>
+    </div>
+    <div class="compare-section">
+      <input type="text" id="compareCity" placeholder="Compare with another city">
+      <button id="compareBtn">Compare</button>
+    </div>
+  </div>
+
+  <div class="dashboard" id="dashboard">
+    <div class="card">
+      <h3>Welcome, <span id="displayName"></span> from <span id="displayCity"></span></h3>
+      <h4>Selected City: <span id="selectedCity"></span></h4>
+    </div>
+    <div class="card" id="weatherCard">
+      <h3>Weather Details</h3>
+      <p><strong>Temperature:</strong> <span id="temp"></span> °C</p>
+      <p><strong>Condition:</strong> <span id="condition"></span></p>
+      <p><strong>Humidity:</strong> <span id="humidity"></span>%</p>
+      <p><strong>Wind Speed:</strong> <span id="wind"></span> kph</p>
+    </div>
+    <div class="card" id="compareWeatherCard">
+      <h3>Comparison Result</h3>
+      <p><strong>City 1 Temperature:</strong> <span id="temp1"></span></p>
+      <p><strong>City 2 Temperature:</strong> <span id="temp2"></span></p>
+    </div>
+    <div class="card" id="newsCard">
+      <h3>Latest News</h3>
+      <ul id="newsList"></ul>
+    </div>
+    <div class="card" id="eventsCard">
+      <h3>Upcoming Events</h3>
+      <ul id="eventsList"></ul>
+    </div>
+  </div>
+</div>
+<footer><p>Data from WeatherAPI, NewsData, Teleport & Open-Meteo</p></footer>
+<script>
+  const WEATHER_API_KEY = '4a6c269e901e46e197b174339250407';
+  const NEWSDATA_API_KEY = 'pub_ec4e73b9be414261a9fecc034eac2f4c';
+  const TICKETMASTER_API_KEY = 'g2iao3m6xdDbyjUrGSff2T53FpSlKaTq';
+
+  const display = (id, text) => document.getElementById(id).textContent = text;
+
+  document.getElementById('toggleProfileBtn').addEventListener('click', () => {
+    document.getElementById('profileContent').classList.toggle('active');
+  });
+
+  document.getElementById('saveProfileBtn').addEventListener('click', () => {
+    const name = document.getElementById('userName').value.trim();
+    const city = document.getElementById('userCity').value.trim();
+    if (!name || !city) return alert('Both fields are required');
+    display('displayName', name);
+    display('displayCity', city);
+    localStorage.setItem('profile', JSON.stringify({ name, city }));
+    document.getElementById('profileContent').classList.remove('active');
+  });
+
+  const savedProfile = JSON.parse(localStorage.getItem('profile') || '{}');
+  if (savedProfile.name) display('displayName', savedProfile.name);
+  if (savedProfile.city) display('displayCity', savedProfile.city);
+
+  document.getElementById('searchBtn').addEventListener('click', () => {
+    const city = document.getElementById('cityInput').value.trim();
+    if (!city) return alert('Enter a city to search');
+    display('selectedCity', city);
+    document.getElementById('dashboard').classList.add('active');
+    fetchWeather(city);
+    fetchCityNews(city);
+    fetchEvents(city);
+  });
+
+  document.getElementById('compareBtn').addEventListener('click', () => {
+    const c1 = document.getElementById('cityInput').value.trim();
+    const c2 = document.getElementById('compareCity').value.trim();
+    if (!c1 || !c2) return alert('Fill both city fields first');
+    compareCityWeather(c1, c2);
+  });
+
+  function fetchWeather(city) {
+    fetch(`https://api.weatherapi.com/v1/current.json?key=${WEATHER_API_KEY}&q=${encodeURIComponent(city)}`)
+      .then(res => res.json())
+      .then(data => {
+        display('temp', data.current.temp_c);
+        display('condition', data.current.condition.text);
+        display('humidity', data.current.humidity);
+        display('wind', data.current.wind_kph);
+      })
+      .catch(err => console.error('Weather error:', err));
+  }
+
+  function compareCityWeather(c1, c2) {
+    Promise.all([
+      fetch(`https://api.weatherapi.com/v1/current.json?key=${WEATHER_API_KEY}&q=${encodeURIComponent(c1)}`),
+      fetch(`https://api.weatherapi.com/v1/current.json?key=${WEATHER_API_KEY}&q=${encodeURIComponent(c2)}`)
+    ])
+    .then(responses => Promise.all(responses.map(r => r.json())))
+    .then(([data1, data2]) => {
+      display('temp1', `${data1.location.name}: ${data1.current.temp_c} °C`);
+      display('temp2', `${data2.location.name}: ${data2.current.temp_c} °C`);
+    })
+    .catch(error => console.error('Comparison error:', error));
+  }
+
+  function fetchCityNews(city) {
+    fetch(`https://newsdata.io/api/1/news?apikey=${NEWSDATA_API_KEY}&q=${encodeURIComponent(city)}&country=in&language=en`)
+      .then(res => res.json())
+      .then(data => {
+        const newsList = document.getElementById('newsList');
+        newsList.innerHTML = '';
+        (data.results || []).slice(0, 5).forEach(news => {
+          const li = document.createElement('li');
+          li.innerHTML = `<a href="${news.link}" target="_blank">${news.title}</a>`;
+          newsList.appendChild(li);
+        });
+      })
+      .catch(err => console.error('News error:', err));
+  }
+
+  function fetchEvents(city) {
+    fetch(`https://app.ticketmaster.com/discovery/v2/events.json?apikey=${TICKETMASTER_API_KEY}&city=${encodeURIComponent(city)}`)
+      .then(res => res.json())
+      .then(data => {
+        const events = data._embedded?.events || [];
+        const eventsList = document.getElementById('eventsList');
+        eventsList.innerHTML = '';
+        if (events.length === 0) {
+          eventsList.innerHTML = '<li>No events found</li>';
+        } else {
+          events.slice(0, 5).forEach(event => {
+            const li = document.createElement('li');
+            li.innerHTML = `<a href="${event.url}" target="_blank">${event.name}</a> (${event.dates.start.localDate})`;
+            eventsList.appendChild(li);
+          });
+        }
+      })
+      .catch(err => console.error('Events error:', err));
+  }
+</script>
+</body>
+</html>
